@@ -1,5 +1,7 @@
 # AI Agents Udemy Course Repository
 
+![Udemy Certification](UC-d7b1e9cd-3dfd-4cb2-b48b-d5a156ed6d63.jpg)
+
 This repository contains code and projects from my Udemy course on building AI agents. It demonstrates the progression from basic text-based chatbots to advanced AI-powered assistants, including voice interaction, web scraping, and document reading, all using local LLMs like Ollama.
 
 ## Overview
