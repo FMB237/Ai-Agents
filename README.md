@@ -91,6 +91,8 @@ AiChatbotUdemyCourse/
 
 ### Day 1: Basic AI Agents
 
+![Basic AI Agent](basic_ai_agent.png)
+
 #### Text-based CLI Agent
 Run the basic agent without UI:
 ```bash
@@ -124,6 +126,8 @@ streamlit run day2/ai_voice_assistant_ui.py
 Interact via the web interface with voice capabilities.
 
 ### Day 3: AI Web Scraper with FAISS
+
+![AI Web Scraper](ai_we.pngb_scraper.png)
 
 Run the web scraper with FAISS integration:
 ```bash
