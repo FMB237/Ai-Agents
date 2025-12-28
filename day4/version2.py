@@ -82,7 +82,7 @@ def retrieve_and_answer(query):
 #Function to allow file download
 def download_summary():
     if summary_text:
-        st.download_button(label="📥 Download summaty",data=text,filename="AI_summary.txt",mime="text/plain")
+        st.download_button(label="📥 Download summary",data=summary_text,file_name="AI_summary.txt",mime="text/plain")
 
 # Streamlit Web UI
 st.title("🤖 AI-Powered Document Reader & Q&A bot")
