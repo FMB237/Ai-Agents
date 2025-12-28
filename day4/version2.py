@@ -8,19 +8,28 @@ import numpy as np
 import pypdf
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import OllamaLLM
-from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import CharacterTextSplitter
 
-llm = OllamaLLM(model="qwen2.5:3b") #Import our AI model
+#Import our AI model
+llm = OllamaLLM(model="qwen2.5:3b")
 
 #Load Hugging face Embeddings
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
-#Initialise file in the database
-index = faiss.IndexFlatL2(384)
-vector_store = [] #To store the vector and metadata
-#Let's create a summary text variable
-summary_text = ""
+#---------------- SESSION STATE INIT ----------------#
+
+if "index" not in st.session_state:
+    st.session_state.index = faiss.IndexFlatL2(384)
+
+if "vector_store" not in st.session_state:
+    st.session_state.vector_store = []  #To store the vector and metadata
+
+if "summary_text" not in st.session_state:
+    st.session_state.summary_text = ""
+
+#--------------------------------------------------#
 
 #Let's write the function to extract text from PDFs
 def extract_text_from_pdf(uploaded_file):
@@ -28,68 +37,89 @@ def extract_text_from_pdf(uploaded_file):
     pdf_reader = pypdf.PdfReader(uploaded_file)
     text = ""
     for page in pdf_reader.pages:
-        text += page.extract_text() + "\n"
+        extracted = page.extract_text()
+        if extracted:
+            text += extracted + "\n"
     return text
+
 
 # Function to store the data in FAISS
 def store_in_faiss(text, url):
-    global index, vector_store
     st.write(f"📥 Storing document '{url}' in FAISS")
 
     # Split the text into chunks
-    splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    splitter = CharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=100
+    )
     texts = splitter.split_text(text)
 
     # Convert text into embeddings and store each chunk
     for chunk in texts:
         vector = embeddings.embed_documents([chunk])
         vector = np.array(vector, dtype=np.float32)
-        index.add(vector)
-        vector_store.append((url, chunk))
+        st.session_state.index.add(vector)
+        st.session_state.vector_store.append((url, chunk))
 
     return "🟢 Data stored successfully"
 
 
 #Function to generate AI summary
 def generate_summary(text):
-    global summary_text
     st.write("Generating AI summary")
-    summary_text = llm.invoke(f"Summarize the following document:\n\n{text[:3000]}")  # Limiting input size
-    return summary_text
-
+    st.session_state.summary_text = llm.invoke(
+        f"Summarize the following document:\n\n{text[:3000]}"
+    )
+    return st.session_state.summary_text
 
 
 # Function to retrieve chunks and answer questions
 def retrieve_and_answer(query):
-    global index, vector_store
-
     # Convert user query into an embedding
-    query_vector = np.array(embeddings.embed_query(query), dtype=np.float32).reshape(1, -1)
+    query_vector = embeddings.embed_query(query)
+    query_vector = np.array(query_vector, dtype=np.float32).reshape(1, -1)
 
     # Search FAISS
-    D, I = index.search(query_vector, k=2)  # Used to retrieve top similar chunks
+    D, I = st.session_state.index.search(query_vector, k=2)
 
     context = ""
     for idx in I[0]:
-        if idx < len(vector_store):
-            context += vector_store[idx][1] + "\n\n"
+        if idx < len(st.session_state.vector_store):
+            context += st.session_state.vector_store[idx][1] + "\n\n"
+
     if not context:
         return "🤖 No relevant data found."
+
     # Ask AI to generate an answer
-    return llm.invoke(f"Based on the following context, answer the question:\n\n{context}\n\nQuestion: {query}\nAnswer:")
+    return llm.invoke(
+        f"Based on the following context, answer the question:\n\n"
+        f"{context}\n\n"
+        f"Question: {query}\nAnswer:"
+    )
 
 
 #Function to allow file download
 def download_summary():
-    if summary_text:
-        st.download_button(label="📥 Download summary",data=summary_text,file_name="AI_summary.txt",mime="text/plain")
+    if st.session_state.summary_text:
+        st.download_button(
+            label="📥 Download summary",
+            data=st.session_state.summary_text,
+            file_name="AI_summary.txt",
+            mime="text/plain"
+        )
 
-# Streamlit Web UI
+
+#---------------- STREAMLIT UI ----------------#
+
 st.title("🤖 AI-Powered Document Reader & Q&A bot")
 st.write("🔗 Upload a PDF and get an AI generated summary!")
 
 # File uploaded
-uploaded_file = st.file_uploader("📂 Upload a PDF document", type=["pdf"])
+uploaded_file = st.file_uploader(
+    "📂 Upload a PDF document",
+    type=["pdf"]
+)
+
 if uploaded_file:
     text = extract_text_from_pdf(uploaded_file)
     store_message = store_in_faiss(text, uploaded_file.name)
