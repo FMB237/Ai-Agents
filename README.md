@@ -158,5 +158,4 @@ This is a personal learning repository, but feel free to fork, experiment, and c
 
 ## License
 
-MIT License - see LICENSE file for details (if applicable).
-
+Not yet desidered
